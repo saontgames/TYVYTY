@@ -9,14 +9,16 @@ public class OfficeComputer : MonoBehaviour
     public float interactionDistance = 2.5f;
 
     public static bool IsOpen { get; private set; }
+    public static int LastClosedFrame { get; private set; } = -1;
 
     private bool computerOpen;
+    private Vector2 scrollPosition;
+
     private GUIStyle titleStyle;
-    private GUIStyle subtitleStyle;
     private GUIStyle headingStyle;
     private GUIStyle textStyle;
+    private GUIStyle smallStyle;
     private GUIStyle statusStyle;
-    private GUIStyle moneyStyle;
     private GUIStyle buttonStyle;
 
     void Awake()
@@ -39,9 +41,10 @@ public class OfficeComputer : MonoBehaviour
             }
 
             if (Keyboard.current.digit1Key.wasPressedThisFrame)
-            {
-                AcceptRequest();
-            }
+                AcceptRequest(0);
+
+            if (Keyboard.current.digit2Key.wasPressedThisFrame)
+                AcceptRequest(1);
 
             return;
         }
@@ -62,6 +65,7 @@ public class OfficeComputer : MonoBehaviour
     {
         computerOpen = true;
         IsOpen = true;
+        scrollPosition = Vector2.zero;
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -69,6 +73,8 @@ public class OfficeComputer : MonoBehaviour
 
     void CloseComputer()
     {
+        LastClosedFrame = Time.frameCount;
+
         computerOpen = false;
         IsOpen = false;
 
@@ -81,20 +87,17 @@ public class OfficeComputer : MonoBehaviour
             : null;
 
         if (cameraController != null)
-        {
             cameraController.RestoreCameraControl();
-        }
 
         Debug.Log("Computadora cerrada. Camara habilitada.");
     }
 
-
-    void AcceptRequest()
+    void AcceptRequest(int index)
     {
         if (JobManager.Instance == null)
             return;
 
-        JobManager.Instance.AcceptJob();
+        JobManager.Instance.AcceptJob(index);
     }
 
     void OnDisable()
@@ -122,38 +125,32 @@ public class OfficeComputer : MonoBehaviour
         titleStyle = new GUIStyle(GUI.skin.label);
         titleStyle.fontSize = 26;
         titleStyle.fontStyle = FontStyle.Bold;
-        titleStyle.normal.textColor =
-            new Color(0.94f, 0.93f, 0.87f);
-
-        subtitleStyle = new GUIStyle(GUI.skin.label);
-        subtitleStyle.fontSize = 12;
-        subtitleStyle.normal.textColor =
-            new Color(0.65f, 0.72f, 0.66f);
+        titleStyle.normal.textColor = Color.white;
 
         headingStyle = new GUIStyle(GUI.skin.label);
         headingStyle.fontSize = 19;
         headingStyle.fontStyle = FontStyle.Bold;
-        headingStyle.normal.textColor = Color.white;
+        headingStyle.normal.textColor =
+            new Color(0.94f, 0.94f, 0.90f);
 
         textStyle = new GUIStyle(GUI.skin.label);
         textStyle.fontSize = 14;
         textStyle.normal.textColor =
-            new Color(0.83f, 0.86f, 0.82f);
+            new Color(0.86f, 0.89f, 0.85f);
+
+        smallStyle = new GUIStyle(GUI.skin.label);
+        smallStyle.fontSize = 12;
+        smallStyle.normal.textColor =
+            new Color(0.67f, 0.74f, 0.68f);
 
         statusStyle = new GUIStyle(GUI.skin.label);
         statusStyle.fontSize = 14;
         statusStyle.fontStyle = FontStyle.Bold;
         statusStyle.normal.textColor =
-            new Color(0.83f, 0.90f, 0.72f);
-
-        moneyStyle = new GUIStyle(GUI.skin.label);
-        moneyStyle.fontSize = 23;
-        moneyStyle.fontStyle = FontStyle.Bold;
-        moneyStyle.normal.textColor =
-            new Color(0.77f, 0.91f, 0.67f);
+            new Color(0.80f, 0.91f, 0.70f);
 
         buttonStyle = new GUIStyle(GUI.skin.button);
-        buttonStyle.fontSize = 14;
+        buttonStyle.fontSize = 13;
         buttonStyle.fontStyle = FontStyle.Bold;
     }
 
@@ -162,10 +159,7 @@ public class OfficeComputer : MonoBehaviour
         Color previousColor = GUI.color;
         GUI.color = color;
 
-        GUI.DrawTexture(
-            rect,
-            Texture2D.whiteTexture
-        );
+        GUI.DrawTexture(rect, Texture2D.whiteTexture);
 
         GUI.color = previousColor;
     }
@@ -180,14 +174,13 @@ public class OfficeComputer : MonoBehaviour
 
         CreateStyles();
 
-        // Fondo oscuro para concentrarse en la PC.
         DrawRect(
             new Rect(0, 0, Screen.width, Screen.height),
-            new Color(0.02f, 0.04f, 0.03f, 0.80f)
+            new Color(0.02f, 0.04f, 0.03f, 0.92f)
         );
 
-        float width = Mathf.Min(620f, Screen.width - 30f);
-        float height = Mathf.Min(425f, Screen.height - 30f);
+        float width = Mathf.Min(680f, Screen.width - 24f);
+        float height = Mathf.Min(510f, Screen.height - 24f);
 
         Rect panel = new Rect(
             (Screen.width - width) / 2f,
@@ -201,162 +194,201 @@ public class OfficeComputer : MonoBehaviour
             new Color(0.09f, 0.12f, 0.10f)
         );
 
-        float x = panel.x + 24f;
-        float y = panel.y + 16f;
-        float contentWidth = panel.width - 48f;
+        float left = panel.x + 22f;
+        float top = panel.y + 15f;
+        float innerWidth = panel.width - 44f;
 
         GUI.Label(
-            new Rect(x, y, contentWidth, 38),
+            new Rect(left, top, innerWidth, 35),
             "TYVYTY",
             titleStyle
         );
 
         GUI.Label(
-            new Rect(x, y + 39, contentWidth, 20),
-            "ADMINISTRACION DEL CEMENTERIO",
-            subtitleStyle
+            new Rect(left, top + 39, innerWidth, 22),
+            "ADMINISTRACION - SOLICITUDES",
+            smallStyle
         );
 
         DrawRect(
-            new Rect(x, y + 72, contentWidth, 1),
-            new Color(0.29f, 0.35f, 0.30f)
+            new Rect(left, top + 72, innerWidth, 1),
+            new Color(0.32f, 0.39f, 0.33f)
         );
 
         GUI.Label(
-            new Rect(x, y + 91, contentWidth, 30),
-            "Solicitudes de mantenimiento",
+            new Rect(left, top + 86, innerWidth, 26),
+            "Bandeja de pedidos",
             headingStyle
         );
 
-        Rect card = new Rect(
-            x,
-            y + 132,
-            contentWidth,
-            220f
-        );
+        float listTop = top + 119f;
+        float listHeight = panel.yMax - listTop - 43f;
 
-        DrawRect(
-            card,
-            new Color(0.15f, 0.19f, 0.16f)
-        );
+        
+        if (JobManager.Instance != null)
+        {
+            int count = JobManager.Instance.JobCount;
+            int receivedCount = 0;
 
-        float cardX = card.x + 16f;
+            for (int i = 0; i < count; i++)
+            {
+                if (JobManager.Instance.GetJob(i).received)
+                    receivedCount++;
+            }
+
+            if (receivedCount == 0)
+            {
+                GUI.Label(
+                    new Rect(left, listTop, innerWidth, 30),
+                    "Bandeja vacia. No hay solicitudes nuevas.",
+                    textStyle
+                );
+            }
+            else
+            {
+                float contentHeight = receivedCount * 169f;
+
+                scrollPosition = GUI.BeginScrollView(
+                    new Rect(left, listTop, innerWidth, listHeight),
+                    scrollPosition,
+                    new Rect(
+                        0, 0,
+                        innerWidth - 20f,
+                        Mathf.Max(contentHeight, listHeight)
+                    )
+                );
+
+                int visibleIndex = 0;
+
+                for (int i = 0; i < count; i++)
+                {
+                    JobManager.CemeteryJob job =
+                        JobManager.Instance.GetJob(i);
+
+                    if (!job.received)
+                        continue;
+
+                    DrawJobCard(
+                        i,
+                        new Rect(
+                            0,
+                            visibleIndex * 169f,
+                            innerWidth - 25f,
+                            157f
+                        )
+                    );
+
+                    visibleIndex++;
+                }
+
+                GUI.EndScrollView();
+            }
+        }
+
 
         GUI.Label(
-            new Rect(cardX, card.y + 13, 230, 24),
-            "SOLICITUD #001",
-            subtitleStyle
-        );
-
-        GUI.Label(
-            new Rect(cardX, card.y + 45, card.width - 30, 28),
-            "Limpieza de tumba 01",
-            headingStyle
-        );
-
-        GUI.Label(
-            new Rect(cardX, card.y + 79, card.width - 30, 24),
-            "Familia Gonzalez - Sector A",
-            textStyle
-        );
-
-        GUI.Label(
-            new Rect(cardX, card.y + 108, card.width - 30, 24),
-            "Retirar flores marchitas y llevarlas al basurero.",
-            textStyle
-        );
-
-        DrawRect(
-            new Rect(cardX, card.y + 143, card.width - 32, 1),
-            new Color(0.29f, 0.35f, 0.30f)
-        );
-
-        GUI.Label(
-            new Rect(cardX, card.y + 154, 160, 22),
-            "RECOMPENSA",
-            subtitleStyle
-        );
-
-        GUI.Label(
-            new Rect(cardX, card.y + 174, 220, 34),
-            "G. 15.000",
-            moneyStyle
-        );
-
-        DrawJobStatus(card);
-
-        GUI.Label(
-            new Rect(x, panel.yMax - 29, contentWidth, 22),
-            "ESC o E para cerrar",
-            subtitleStyle
+            new Rect(
+                left,
+                panel.yMax - 30,
+                innerWidth,
+                23
+            ),
+            "1 / 2 aceptar pedidos  |  ESC o E cerrar",
+            smallStyle
         );
     }
 
-    void DrawJobStatus(Rect card)
+    void DrawJobCard(int index, Rect rect)
     {
-        if (JobManager.Instance == null)
+        JobManager.CemeteryJob job =
+            JobManager.Instance.GetJob(index);
+
+        if (job == null)
             return;
 
-        JobManager.JobState state =
-            JobManager.Instance.CurrentState;
-
-        Rect buttonRect = new Rect(
-            card.xMax - 188,
-            card.y + 165,
-            170,
-            38
+        DrawRect(
+            rect,
+            new Color(0.16f, 0.20f, 0.17f)
         );
 
-        if (state == JobManager.JobState.Available)
+        float x = rect.x + 14f;
+        float y = rect.y + 10f;
+        float width = rect.width - 28f;
+
+        GUI.Label(
+            new Rect(x, y, width, 21),
+            "SOLICITUD #" + job.id +
+            "  |  " + JobManager.Instance.GetStatusText(index),
+            statusStyle
+        );
+
+        GUI.Label(
+            new Rect(x, y + 26, width, 24),
+            job.title,
+            textStyle
+        );
+
+        GUI.Label(
+            new Rect(x, y + 52, width, 21),
+            job.family + " - " + job.location,
+            smallStyle
+        );
+
+        GUI.Label(
+            new Rect(x, y + 77, width, 21),
+            job.description,
+            smallStyle
+        );
+
+        GUI.Label(
+            new Rect(x, y + 115, 200, 27),
+            "G. " + job.reward.ToString("N0"),
+            statusStyle
+        );
+
+        if (job.status == JobManager.JobStatus.Available)
         {
-            Color previousColor = GUI.backgroundColor;
-            GUI.backgroundColor =
-                new Color(0.47f, 0.66f, 0.45f);
+            Rect buttonRect = new Rect(
+                rect.xMax - 170f,
+                y + 109f,
+                155f,
+                31f
+            );
 
             if (GUI.Button(
                 buttonRect,
-                "Aceptar pedido [1]",
-                buttonStyle))
+                "Aceptar [" + (index + 1) + "]",
+                buttonStyle
+            ))
             {
-                AcceptRequest();
+                AcceptRequest(index);
             }
-
-            GUI.backgroundColor = previousColor;
-        }
-        else
-        {
-            string status =
-                JobManager.Instance.GetStatusText();
-
-            GUI.Label(
-                buttonRect,
-                status,
-                statusStyle
-            );
         }
     }
 
-    void DrawInteractionHint()
-    {
-        if (player == null)
-            return;
+    
+void DrawInteractionHint()
+{
+    if (player == null)
+        return;
 
-        float distance = Vector3.Distance(
-            player.position,
-            transform.position
-        );
+    float distance = Vector3.Distance(
+        player.position,
+        transform.position
+    );
 
-        if (distance > interactionDistance)
-            return;
+    if (distance > interactionDistance)
+        return;
 
-        GUI.Box(
-            new Rect(
-                Screen.width / 2f - 135,
-                Screen.height - 85,
-                270,
-                43
-            ),
-            "E - Usar computadora"
-        );
-    }
+    GUI.Box(
+        new Rect(
+            Screen.width / 2f - 135,
+            Screen.height - 85,
+            270,
+            43
+        ),
+        "E - Usar computadora"
+    );
+}
+
 }

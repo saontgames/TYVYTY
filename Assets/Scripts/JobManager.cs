@@ -1,28 +1,51 @@
 
+using System.Collections;
 using UnityEngine;
 
 public class JobManager : MonoBehaviour
 {
     public static JobManager Instance { get; private set; }
 
-    public enum JobState
+    public enum JobStatus
     {
         Available,
-        Pending,
-        FlowersCollected,
+        Accepted,
+        InProgress,
         Completed
     }
 
-    [Header("Configuracion del trabajo")]
-    [SerializeField] private string jobName =
-        "Limpieza de tumba 01";
+    public enum JobType
+    {
+        FlowerRemoval,
+        GravestoneCleaning
+    }
 
-    [SerializeField] private int reward = 15000;
+    [System.Serializable]
+    public class CemeteryJob
+    {
+        public string id;
+        public string family;
+        public string title;
+        public string location;
+        public string description;
+        public int reward;
+        public JobType type;
 
-    public JobState CurrentState { get; private set; }
-        = JobState.Available;
+        [HideInInspector] public bool received;
+        [HideInInspector] public JobStatus status;
+    }
 
-    private bool rewardPaid = false;
+    public CemeteryJob[] jobs;
+
+    [Header("Tiempos de prueba")]
+    public float firstMessageDelay = 10f;
+    public float secondMessageDelay = 30f;
+    public float notificationDuration = 7f;
+
+    private string notificationText = "";
+    private float notificationEndTime;
+
+    public int JobCount => jobs == null ? 0 : jobs.Length;
 
     void Awake()
     {
@@ -33,137 +56,258 @@ public class JobManager : MonoBehaviour
         }
 
         Instance = this;
+
+        jobs = new CemeteryJob[]
+        {
+            new CemeteryJob
+            {
+                id = "001",
+                family = "Familia Gonzalez",
+                title = "Retirar flores marchitas",
+                location = "Sector A - Tumba 01",
+                description = "Retirar flores y llevarlas al basurero.",
+                reward = 15000,
+                type = JobType.FlowerRemoval,
+                status = JobStatus.Available
+            },
+            new CemeteryJob
+            {
+                id = "002",
+                family = "Familia Benitez",
+                title = "Limpieza de lapida",
+                location = "Sector A - Tumba 02",
+                description = "Limpiar la lapida completamente.",
+                reward = 25000,
+                type = JobType.GravestoneCleaning,
+                status = JobStatus.Available
+            }
+        };
     }
 
-    // Aceptar el trabajo desde la computadora
-    public bool AcceptJob()
+    void Start()
     {
-        if (CurrentState != JobState.Available)
-            return false;
-
-        CurrentState = JobState.Pending;
-
-        Debug.Log("Trabajo aceptado: " + jobName);
-        return true;
+        StartCoroutine(DeliverRequests());
     }
 
-    // Registrar que el jugador recogio las flores
-    public void RegisterFlowerPickup()
+    IEnumerator DeliverRequests()
     {
-        if (CurrentState != JobState.Pending)
+        yield return new WaitForSeconds(firstMessageDelay);
+        ReceiveJob(0);
+
+        yield return new WaitForSeconds(secondMessageDelay);
+        ReceiveJob(1);
+    }
+
+    void ReceiveJob(int index)
+    {
+        CemeteryJob job = GetJob(index);
+
+        if (job == null || job.received)
             return;
 
-        CurrentState = JobState.FlowersCollected;
+        job.received = true;
 
-        Debug.Log("Objetivo 1: flores recogidas.");
+        notificationText =
+            "Nuevo mensaje de " + job.family +
+            "\nRevisa la computadora de la oficina.";
+
+        notificationEndTime = Time.time + notificationDuration;
+
+        Debug.Log("Nuevo pedido recibido: " + job.family);
     }
 
-    // Solo permite recoger flores con un trabajo activo
-    public bool CanCollectFlowers()
+    public CemeteryJob GetJob(int index)
     {
-        return CurrentState == JobState.Pending ||
-               CurrentState == JobState.FlowersCollected;
+        if (jobs == null || index < 0 || index >= jobs.Length)
+            return null;
+
+        return jobs[index];
     }
 
-    // Completar el trabajo y pagar una sola vez
-    public bool CompleteFlowerDisposal()
+    public bool AcceptJob(int index)
     {
-        if (CurrentState != JobState.FlowersCollected)
+        CemeteryJob job = GetJob(index);
+
+        if (job == null ||
+            !job.received ||
+            job.status != JobStatus.Available)
             return false;
 
-        if (rewardPaid)
-            return false;
+        job.status = JobStatus.Accepted;
 
-        if (CemeteryEconomy.Instance == null)
-        {
-            Debug.LogWarning("Falta CemeteryEconomy.");
-            return false;
-        }
-
-        rewardPaid = true;
-        CurrentState = JobState.Completed;
-
-        CemeteryEconomy.Instance.AddMoney(reward);
-
-        Debug.Log("Mision completada: " + jobName);
-
+        Debug.Log("Pedido aceptado: " + job.title);
         return true;
     }
 
-    // Estado para mostrar en la computadora
-    public string GetStatusText()
+    public bool CanCollectFlowers()
     {
-        switch (CurrentState)
+        CemeteryJob job = GetJob(0);
+
+        return job != null &&
+            (job.status == JobStatus.Accepted ||
+             job.status == JobStatus.InProgress);
+    }
+
+    public void RegisterFlowerPickup()
+    {
+        CemeteryJob job = GetJob(0);
+
+        if (job != null && job.status == JobStatus.Accepted)
+            job.status = JobStatus.InProgress;
+    }
+
+    public bool CompleteFlowerDisposal()
+    {
+        CemeteryJob job = GetJob(0);
+
+        if (job == null || job.status != JobStatus.InProgress)
+            return false;
+
+        return CompleteJob(0);
+    }
+
+    public bool CanCleanGravestone()
+    {
+        CemeteryJob job = GetJob(1);
+
+        return job != null &&
+            (job.status == JobStatus.Accepted ||
+             job.status == JobStatus.InProgress);
+    }
+
+    public void RegisterCleaningProgress()
+    {
+        CemeteryJob job = GetJob(1);
+
+        if (job != null && job.status == JobStatus.Accepted)
+            job.status = JobStatus.InProgress;
+    }
+
+    public bool CompleteGravestoneCleaning()
+    {
+        CemeteryJob job = GetJob(1);
+
+        if (job == null || job.status != JobStatus.InProgress)
+            return false;
+
+        return CompleteJob(1);
+    }
+
+    bool CompleteJob(int index)
+    {
+        CemeteryJob job = GetJob(index);
+
+        if (job == null ||
+            job.status != JobStatus.InProgress ||
+            CemeteryEconomy.Instance == null)
+            return false;
+
+        // Se marca antes de pagar para evitar duplicaciones.
+        job.status = JobStatus.Completed;
+
+        CemeteryEconomy.Instance.AddMoney(job.reward);
+
+        Debug.Log("Pedido #" + job.id + " completado.");
+        return true;
+    }
+
+    public string GetStatusText(int index)
+    {
+        CemeteryJob job = GetJob(index);
+
+        if (job == null || !job.received)
+            return "Sin recibir";
+
+        switch (job.status)
         {
-            case JobState.Available:
-                return "Disponible";
-
-            case JobState.Pending:
-                return "Aceptado - pendiente";
-
-            case JobState.FlowersCollected:
-                return "Flores recogidas";
-
-            case JobState.Completed:
-                return "Completado";
-
-            default:
-                return "Desconocido";
+            case JobStatus.Available: return "Disponible";
+            case JobStatus.Accepted: return "Aceptado";
+            case JobStatus.InProgress: return "En progreso";
+            case JobStatus.Completed: return "Completado";
+            default: return "Desconocido";
         }
     }
 
-    // Interfaz provisional de objetivos
+    public int GetGuidedJobIndex()
+    {
+        for (int i = 0; i < JobCount; i++)
+        {
+            CemeteryJob job = GetJob(i);
+
+            if (job.status == JobStatus.Accepted ||
+                job.status == JobStatus.InProgress)
+                return i;
+        }
+
+        return -1;
+    }
+
     void OnGUI()
     {
-
         if (OfficeComputer.IsOpen)
             return;
 
-        GUI.Box(
-            new Rect(15, 155, 340, 125),
-            "TYVYTY - TRABAJO ACTUAL"
-        );
-
-        GUI.Label(
-            new Rect(30, 185, 310, 25),
-            jobName
-        );
-
-        if (CurrentState == JobState.Available)
+        // Mensaje temporal que aparece cuando llega el pedido.
+        if (Time.time < notificationEndTime)
         {
-            GUI.Label(
-                new Rect(30, 215, 310, 25),
-                "Visita la oficina para aceptar el trabajo."
+            GUI.Box(
+                new Rect(
+                    Screen.width / 2f - 215,
+                    15,
+                    430,
+                    75
+                ),
+                notificationText
             );
-
-            return;
         }
 
-        string objective1 =
-            CurrentState == JobState.Pending
-            ? "[ ] Recoger flores marchitas"
-            : "[X] Recoger flores marchitas";
+        // No mostramos la lista de pedidos disponibles.
+        // Solo aparece la checklist de trabajos aceptados.
+        int index = GetGuidedJobIndex();
 
-        string objective2 =
-            CurrentState == JobState.Completed
-            ? "[X] Depositar flores en el basurero"
-            : "[ ] Depositar flores en el basurero";
+        if (index < 0)
+            return;
 
-        GUI.Label(
-            new Rect(30, 210, 310, 25),
-            objective1
+        CemeteryJob job = GetJob(index);
+
+        float x = Mathf.Max(10, Screen.width - 365);
+
+        GUI.Box(
+            new Rect(x, 105, 350, 145),
+            "ENCARGO ACTIVO #" + job.id
         );
 
         GUI.Label(
-            new Rect(30, 235, 310, 25),
-            objective2
+            new Rect(x + 15, 137, 320, 24),
+            job.family + " - " + job.title
         );
 
-        if (CurrentState == JobState.Completed)
+        if (job.type == JobType.FlowerRemoval)
+        {
+            bool pickedUp =
+                job.status == JobStatus.InProgress;
+
+            GUI.Label(
+                new Rect(x + 15, 172, 325, 25),
+                (pickedUp ? "[X] " : "[ ] ") +
+                "Recoger las flores marchitas"
+            );
+
+            GUI.Label(
+                new Rect(x + 15, 202, 325, 25),
+                "[ ] Depositar flores en el basurero"
+            );
+        }
+        else
         {
             GUI.Label(
-                new Rect(30, 258, 310, 20),
-                "COMPLETADO"
+                new Rect(x + 15, 172, 325, 25),
+                "[ ] Limpiar la lapida de la tumba 02"
+            );
+
+            GUI.Label(
+                new Rect(x + 15, 202, 325, 25),
+                "Manten E para limpiar"
             );
         }
     }

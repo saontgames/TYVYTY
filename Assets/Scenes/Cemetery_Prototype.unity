@@ -2428,8 +2428,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9428da3171a6d4781b0bf2298ec3dcc6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::JobManager
-  jobName: Limpieza de tumba 01
-  reward: 15000
+  jobs: []
 --- !u!1 &1992644627
 GameObject:
   m_ObjectHideFlags: 0
@@ -2442,6 +2441,7 @@ GameObject:
   - component: {fileID: 1992644630}
   - component: {fileID: 1992644629}
   - component: {fileID: 1992644628}
+  - component: {fileID: 1992644632}
   m_Layer: 0
   m_Name: Gravestone_02
   m_TagString: Untagged
@@ -2542,6 +2542,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1992644632
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1992644627}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2d23e583ca9a4a2a865fe63f189f58a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GravestoneCleaning
+  player: {fileID: 641268911}
+  interactionDistance: 2.5
+  cleaningDuration: 4
+  dirtyColor: {r: 0.27, g: 0.27, b: 0.25, a: 1}
+  cleanColor: {r: 0.8, g: 0.79, b: 0.73, a: 1}
 --- !u!1 &2052202883
 GameObject:
   m_ObjectHideFlags: 0
