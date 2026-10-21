@@ -7,6 +7,7 @@ public class JobManager : MonoBehaviour
 
     public enum JobState
     {
+        Available,
         Pending,
         FlowersCollected,
         Completed
@@ -19,7 +20,7 @@ public class JobManager : MonoBehaviour
     [SerializeField] private int reward = 15000;
 
     public JobState CurrentState { get; private set; }
-        = JobState.Pending;
+        = JobState.Available;
 
     private bool rewardPaid = false;
 
@@ -34,6 +35,19 @@ public class JobManager : MonoBehaviour
         Instance = this;
     }
 
+    // Aceptar el trabajo desde la computadora
+    public bool AcceptJob()
+    {
+        if (CurrentState != JobState.Available)
+            return false;
+
+        CurrentState = JobState.Pending;
+
+        Debug.Log("Trabajo aceptado: " + jobName);
+        return true;
+    }
+
+    // Registrar que el jugador recogio las flores
     public void RegisterFlowerPickup()
     {
         if (CurrentState != JobState.Pending)
@@ -41,9 +55,17 @@ public class JobManager : MonoBehaviour
 
         CurrentState = JobState.FlowersCollected;
 
-        Debug.Log("Objetivo 1 completado: flores recogidas.");
+        Debug.Log("Objetivo 1: flores recogidas.");
     }
 
+    // Solo permite recoger flores con un trabajo activo
+    public bool CanCollectFlowers()
+    {
+        return CurrentState == JobState.Pending ||
+               CurrentState == JobState.FlowersCollected;
+    }
+
+    // Completar el trabajo y pagar una sola vez
     public bool CompleteFlowerDisposal()
     {
         if (CurrentState != JobState.FlowersCollected)
@@ -58,8 +80,8 @@ public class JobManager : MonoBehaviour
             return false;
         }
 
-        CurrentState = JobState.Completed;
         rewardPaid = true;
+        CurrentState = JobState.Completed;
 
         CemeteryEconomy.Instance.AddMoney(reward);
 
@@ -68,6 +90,29 @@ public class JobManager : MonoBehaviour
         return true;
     }
 
+    // Estado para mostrar en la computadora
+    public string GetStatusText()
+    {
+        switch (CurrentState)
+        {
+            case JobState.Available:
+                return "Disponible";
+
+            case JobState.Pending:
+                return "Aceptado - pendiente";
+
+            case JobState.FlowersCollected:
+                return "Flores recogidas";
+
+            case JobState.Completed:
+                return "Completado";
+
+            default:
+                return "Desconocido";
+        }
+    }
+
+    // Interfaz provisional de objetivos
     void OnGUI()
     {
         GUI.Box(
@@ -80,6 +125,16 @@ public class JobManager : MonoBehaviour
             jobName
         );
 
+        if (CurrentState == JobState.Available)
+        {
+            GUI.Label(
+                new Rect(30, 215, 310, 25),
+                "Visita la oficina para aceptar el trabajo."
+            );
+
+            return;
+        }
+
         string objective1 =
             CurrentState == JobState.Pending
             ? "[ ] Recoger flores marchitas"
@@ -90,8 +145,15 @@ public class JobManager : MonoBehaviour
             ? "[X] Depositar flores en el basurero"
             : "[ ] Depositar flores en el basurero";
 
-        GUI.Label(new Rect(30, 210, 310, 25), objective1);
-        GUI.Label(new Rect(30, 235, 310, 25), objective2);
+        GUI.Label(
+            new Rect(30, 210, 310, 25),
+            objective1
+        );
+
+        GUI.Label(
+            new Rect(30, 235, 310, 25),
+            objective2
+        );
 
         if (CurrentState == JobState.Completed)
         {
