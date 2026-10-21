@@ -19,6 +19,8 @@ public class ThirdPersonMovement : MonoBehaviour
 
     void Update()
     {
+        if (OfficeComputer.IsOpen)
+        return;
         if (Keyboard.current == null || cameraTransform == null)
             return;
 

@@ -115,6 +115,10 @@ public class JobManager : MonoBehaviour
     // Interfaz provisional de objetivos
     void OnGUI()
     {
+
+        if (OfficeComputer.IsOpen)
+            return;
+
         GUI.Box(
             new Rect(15, 155, 340, 125),
             "TYVYTY - TRABAJO ACTUAL"

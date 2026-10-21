@@ -24,8 +24,32 @@ public class ThirdPersonCamera : MonoBehaviour
         Cursor.visible = false;
     }
 
+    public void RestoreCameraControl()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
     void LateUpdate()
     {
+
+        if (OfficeComputer.IsOpen)
+        return;
+
+        if (Keyboard.current != null &&
+            Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            bool locked =
+                Cursor.lockState == CursorLockMode.Locked;
+
+            Cursor.lockState = locked
+                ? CursorLockMode.None
+                : CursorLockMode.Locked;
+
+            Cursor.visible = locked;
+        }
+
+
         if (target == null)
             return;
 
